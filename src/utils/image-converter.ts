@@ -1,6 +1,6 @@
 import sharp from "sharp";
 import { mkdir } from "node:fs/promises";
-import { dirname } from "node:path";
+import { dirname, join } from "node:path";
 
 interface ConvertResult {
   width: number;
@@ -27,4 +27,21 @@ export async function convertAndSave(
     height: result.height,
     file_size_bytes: result.size,
   };
+}
+
+/**
+ * Build absolute output path and relative display path for an asset file.
+ */
+export function buildAssetPath(
+  projectRoot: string,
+  subdirectory: string,
+  filename: string,
+) {
+  const assetsDir = join(projectRoot, "src", "assets");
+  const outputDir = subdirectory ? join(assetsDir, subdirectory) : assetsDir;
+  const outputPath = join(outputDir, `${filename}.webp`);
+  const relativePath = subdirectory
+    ? `src/assets/${subdirectory}/${filename}.webp`
+    : `src/assets/${filename}.webp`;
+  return { outputPath, relativePath };
 }

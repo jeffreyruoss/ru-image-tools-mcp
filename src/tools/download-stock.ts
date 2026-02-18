@@ -1,6 +1,5 @@
 import { z } from "zod";
-import { join } from "node:path";
-import { convertAndSave } from "../utils/image-converter.js";
+import { convertAndSave, buildAssetPath } from "../utils/image-converter.js";
 import type { DownloadResult } from "../utils/types.js";
 
 export const downloadStockSchema = z.object({
@@ -10,8 +9,15 @@ export const downloadStockSchema = z.object({
     .regex(/^[a-zA-Z0-9_-]+$/, "Alphanumeric, hyphens, underscores only")
     .describe("Filename without extension"),
   credit: z.string().describe("Attribution string from search results"),
+  download_tracking_url: z
+    .string()
+    .url()
+    .optional()
+    .describe("Unsplash download tracking URL (from search results)"),
   subdirectory: z
     .string()
+    .regex(/^[a-zA-Z0-9_/-]*$/, "Alphanumeric, hyphens, underscores, slashes only")
+    .refine((s) => !s.includes(".."), "Path traversal not allowed")
     .default("")
     .describe("Subfolder within src/assets/"),
 });
@@ -21,25 +27,13 @@ type DownloadInput = z.infer<typeof downloadStockSchema>;
 export async function handleDownloadStock(
   input: DownloadInput,
 ): Promise<DownloadResult> {
-  const { url, filename, credit, subdirectory } = input;
+  const { url, filename, credit, download_tracking_url, subdirectory } = input;
   const projectRoot = process.env.PROJECT_ROOT;
   if (!projectRoot) throw new Error("PROJECT_ROOT not set");
 
-  // If this is an Unsplash image, trigger download tracking
-  if (url.includes("unsplash.com")) {
-    const unsplashKey = process.env.UNSPLASH_ACCESS_KEY;
-    if (unsplashKey) {
-      // The download_location URL should be triggered separately
-      // but we can also just trigger it based on the raw URL pattern
-      try {
-        // Extract photo ID from URL if possible and trigger tracking
-        // Unsplash requires hitting the download_location endpoint
-        // This is best-effort; the search results include download_tracking_url
-        await fetch(url, { method: "HEAD" }).catch(() => {});
-      } catch {
-        // Non-critical, continue with download
-      }
-    }
+  // Trigger Unsplash download tracking if provided
+  if (download_tracking_url) {
+    await fetch(download_tracking_url).catch(() => {});
   }
 
   // Download the image
@@ -50,21 +44,9 @@ export async function handleDownloadStock(
 
   const buffer = Buffer.from(await res.arrayBuffer());
 
-  // Build output path
-  const assetsDir = join(projectRoot, "src", "assets");
-  const outputDir = subdirectory ? join(assetsDir, subdirectory) : assetsDir;
-  const outputPath = join(outputDir, `${filename}.webp`);
-
-  // Convert to WebP and save
-  const { width, height, file_size_bytes } = await convertAndSave(
-    buffer,
-    outputPath,
-  );
-
-  // Build relative path for display
-  const relativePath = subdirectory
-    ? `src/assets/${subdirectory}/${filename}.webp`
-    : `src/assets/${filename}.webp`;
+  // Build output path and convert to WebP
+  const { outputPath, relativePath } = buildAssetPath(projectRoot, subdirectory, filename);
+  const { width, height, file_size_bytes } = await convertAndSave(buffer, outputPath);
 
   return {
     file_path: relativePath,

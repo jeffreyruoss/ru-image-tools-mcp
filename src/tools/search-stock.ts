@@ -5,8 +5,6 @@ import { searchPixabay } from "../services/pixabay.js";
 import type {
   StockImageResult,
   StockSearchParams,
-  Source,
-  Orientation,
 } from "../utils/types.js";
 
 export const searchStockSchema = z.object({
@@ -54,11 +52,7 @@ export async function handleSearchStock(input: SearchInput) {
     if (!searchFn) return;
 
     try {
-      const items = await searchFn({
-        query,
-        count,
-        orientation: orientation as Orientation,
-      });
+      const items = await searchFn({ query, count, orientation });
       results.push(...items);
       sourcesSearched.push(src);
     } catch (err) {

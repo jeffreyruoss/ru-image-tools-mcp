@@ -11,7 +11,7 @@ export const generateImageSchema = z.object({
     .describe("Filename without extension"),
   model: z
     .string()
-    .default("gemini-2.0-flash-preview-image-generation")
+    .default("gemini-2.5-flash-image")
     .describe("Gemini model for image generation"),
   aspect_ratio: z
     .enum(["1:1", "3:4", "4:3", "9:16", "16:9", "5:4"])

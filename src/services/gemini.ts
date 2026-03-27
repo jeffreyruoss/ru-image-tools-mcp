@@ -8,7 +8,7 @@ interface GeminiImageResult {
 
 export async function generateImage(
   prompt: string,
-  model: string = "gemini-2.0-flash-preview-image-generation",
+  model: string = "gemini-2.5-flash-image",
   aspectRatio?: AspectRatio,
 ): Promise<GeminiImageResult> {
   const key = process.env.GEMINI_API_KEY;
